@@ -4,6 +4,7 @@ Created on Sep 24, 2017
 @author: mstf
 '''
 
+import os
 import sys
 import json
 import random
@@ -166,12 +167,14 @@ class Graph(object):
 class CoMinSolver(object):
     
     _graph = None
+    _random = False
     _total_cost = 0
     _seen_vertexes = []
     _incoming_edge_colour = []
     
     
-    def __init__(self, fname):
+    def __init__(self, fname, rnd = False):
+        self._random = rnd
         self._graph = Graph()
         self._graph.reconstruct_graph_from_json(fname)
         
@@ -225,63 +228,114 @@ class CoMinSolver(object):
         self._incoming_edge_colour[self._graph.get_root()] = -1
         
         while not self._is_all_seen():
-            
-            print self._seen_vertexes
-            print self._incoming_edge_colour
+
+            #print self._seen_vertexes
+            #print self._incoming_edge_colour
             
             curr_min_cost = -1
             curr_min_cost_vertex = -1
             curr_min_cost_pair = None
-            
+            candidates_for_random = []
+
             for s in range(len(self._seen_vertexes)):
                 if 1 == self._seen_vertexes[s]:
-                    min_cp = self._get_min_cost_out_of_cost_pairs(self._get_vertex_cost_pairs(s))
-                    if -1 != min_cp["v"]:
-                        if -1 == curr_min_cost:
-                            curr_min_cost = min_cp["c"]
-                            curr_min_cost_vertex = s
-                            curr_min_cost_pair = min_cp
-                        else:
-                            if min_cp["c"] < curr_min_cost:
+                    if self._random == False:
+                        min_cp = self._get_min_cost_out_of_cost_pairs(self._get_vertex_cost_pairs(s))
+                        if -1 != min_cp["v"]:
+                            if -1 == curr_min_cost:
+                                curr_min_cost = min_cp["c"]
                                 curr_min_cost_vertex = s
                                 curr_min_cost_pair = min_cp
-            
+                            else:
+                                if min_cp["c"] < curr_min_cost:
+                                    curr_min_cost_vertex = s
+                                    curr_min_cost_pair = min_cp
+                    else:
+                        vc_pairs = self._get_vertex_cost_pairs(s)
+                        for pair in vc_pairs:
+                            candidates_for_random.append({"v": s, "p": pair})
+
+            if self._random == True:
+                idx = random.randint(0, len(candidates_for_random) - 1)
+                curr_min_cost = candidates_for_random[idx]["p"]["c"]
+                curr_min_cost_vertex = candidates_for_random[idx]["v"]
+                curr_min_cost_pair = candidates_for_random[idx]["p"]
+
             self._total_cost += curr_min_cost_pair["c"]
             self._seen_vertexes[curr_min_cost_pair["v"]] = 1
             self._incoming_edge_colour[curr_min_cost_pair["v"]] = self._graph.get_colour(curr_min_cost_vertex, curr_min_cost_pair["v"])
 
-        print self._seen_vertexes
-        print self._incoming_edge_colour
-            
-        print self._total_cost
-                    
-                    
+        #print self._seen_vertexes
+        #print self._incoming_edge_colour
+    
+    def get_total_cost(self):
+        return self._total_cost
+
+    def get_number_of_vertex(self):
+        return self._graph.get_num_of_vertex()
+
+    def get_number_of_edge(self):
+        return self._graph.get_num_of_edge()
+
+    def get_number_of_colour(self):
+        return self._graph.get_num_of_colour()
+
+    def get_root_vertex(self):
+        return self._graph.get_root()
+
 if __name__ == '__main__':
+
+    '''
+    for g in range(1, 101):
+        graph = Graph()    
+        graph.set_vertex(50)
+        graph.set_edge(700)
+        graph.set_root(random.randint(0, 49))
+        graph.construct_graph()
+        for c in range (10, 101):
+            graph.clear_colour()
+            graph.set_colour(c)
+            graph.assign_colours()
+            graph.dump_into_file("./changes_on_colour/", "_" + str(g) + "_")
+    '''
+
     '''
     g = Graph()
-    g.set_vertex(4)
-    g.set_edge(5)
-    g.set_root(random.randint(0, 3))
+    g.set_vertex(5)
+    g.set_edge(6)
+    g.set_root(1)
     g.construct_graph()
     g.set_colour(10)
     g.assign_colours()
     g.dump_into_file("./", "")
     print g
     '''
+
     '''
     g = Graph()
     g.reconstruct_graph_from_json("grap_v_10_e_20_c_20_r_9_2017_09_24_14_32_26_907880.json")
     print g
     '''
-    #'''
-    solver = CoMinSolver("grap_v_4_e_5_c_10_r_0_2017_09_24_16_09_45_497386.json")
-    solver.solve()
-    #'''                
-                    
-                    
-        
 
-                
-                
-                
-                
+    '''
+    solver = CoMinSolver("grap_v_5_e_6_c_10_r_1_2017_09_25_17_44_03_335158.json", True)
+    solver.solve()
+    '''
+
+    root_folder = "./changes_on_colour/"
+    solution_array = []
+
+    files = os.listdir(root_folder)
+
+    for f in files:
+        print root_folder + f
+        solver = CoMinSolver(root_folder + f)
+        solver.solve()
+        solution_array.append({"v" : solver.get_number_of_vertex(),
+                               "e" : solver.get_number_of_edge(),
+                               "c" : solver.get_number_of_colour(),
+                               "r" : solver.get_root_vertex(),
+                               "t" : solver.get_total_cost()})
+    
+    print solution_array
+
